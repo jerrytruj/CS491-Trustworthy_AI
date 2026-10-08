@@ -1,0 +1,7 @@
+# MetaDrive itself: pip install "git+https://github.com/metadriverse/metadrive.git"
+torch
+numpy
+pandas
+matplotlib
+pillow
+tabulate
