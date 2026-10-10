@@ -49,7 +49,7 @@ Use one with `python evaluate.py --policy cnn --model models/cnn_policy_round0.p
 - `results/frames/*.png`: what the camera saw
 - `results/figs/`: report table + figures (`make_report_figs.py` reads the `autopilot_clean` and `cnn_clean` tags)
 
-## Where things stand (Oct 7)
+## Where things stand (as of Oct 7)
 
 | | Autopilot | CNN round 0 | CNN after DAgger |
 |---|---|---|---|
@@ -69,7 +69,7 @@ rough order of payoff:
    start); check `results/traces/cnn_clean_route_B.csv`.
 4. More training routes or bigger images (84x84 is small for spotting junctions).
 
-## Design notes (for the methodology section)
+## Design notes (a.k.a the methodology section)
 - **Routes:** procedurally generated 4-block MetaDrive roads. Training on seeds 0-29; validation during
   training uses whole held-out routes (27-29). Fixed evaluation routes, never trained on:
   route_A=1000, route_B=1002, route_C=1005, route_D=1006 (mix of intersections, roundabouts, T-junction,
