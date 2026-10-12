@@ -59,8 +59,7 @@ Use one with `python evaluate.py --policy cnn --model models/cnn_policy_round0.p
 | route_D | completes | leaves road at 49% (T-junction) | stalls at 50% at time limit (over-brakes) |
 
 So the pipeline works end to end, the autopilot baseline is solid (4/4), and the CNN baseline is weak
-outside the easy route. That's a legit Phase 1 baseline as is, but if you want it stronger, ideas in
-rough order of payoff:
+outside the easy route. The following are some additional things we could think to add as well:
 1. **Fix over-braking from DAgger.** The autopilot slams the brake (-1) any time speed passes ~30 km/h,
    so DAgger data is ~25% brake labels. Try a lower brake weight in `train_cnn.py` (throttle class weight
    power 1.0 -> 0.5), or relabel brake as cruise when speed is within a few km/h of 30.
@@ -88,5 +87,3 @@ rough order of payoff:
   so that's turned off and line touches are counted as a metric instead.
 - **Metrics:** route completion %, success, collision, out-of-road, solid line touches, mean/max offset
   from lane center (m, measured against the route's own lanes), % of time >1 m off center, mean speed.
-
-If anything errors, paste the full error message into chat.
