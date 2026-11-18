@@ -76,6 +76,7 @@ Each frame ends as verified (bounds prove it), falsified (an attack found a flip
 Main finding: the guarantee only holds for very small noise. In simulation, random noise up to +-8/255 did not break routes A and D, but a worst-case pattern flips the decision at +-1/255 on most frames.
 Random testing gave a false sense of safety.
 The round 2 model (cnn_mac9e) gave nearly the same picture (47, 10, 0 verified at +-0.25, +-0.5, +-1, in `results/verify_summary_9e.csv`). Better driving did not make the network more robust.
+An alpha-CROWN check on 5 frames (`results/verify_alpha_test.csv`, 20 to 230 seconds per setting) gave the same picture: at +-0.25 four frames were verified within one slot and one stayed unknown, at +-0.5 one was verified and three stayed unknown, and from +-1 almost all were flipped. The alpha tuning stopped early after 10 iterations with no improvement, so tighter alpha bounds did not settle the unknown frames. Settling them would need the branch-and-bound step of beta-CROWN.
 Brightness caveat: the brightness box lets every pixel change independently, which is far larger than a real lighting change (all pixels scale together), so those falsified rows must not be read as "brightness breaks it".
 The strict version (same slot, not just within one slot) is also in `results/verify_summary.csv` (script: `verify_cnn.py`).
 
