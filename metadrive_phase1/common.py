@@ -16,8 +16,7 @@ TRAIN_SEEDS = list(range(0, 30))
 
 # The FIXED evaluation routes. Held out from training, never change these,
 # Phase 2 disruption experiments must run on exactly these routes.
-# Screened seeds 1000-1009: the autopilot itself fails 1001, 1003, 1007 (curb hits at
-# T-junctions / roundabouts), so those can't be fair tests of a policy that imitates it.
+# Each number is a MetaDrive seed: a randomly built road that comes out the same every time.
 FIXED_ROUTES = {
     "route_A": 1000,  # on-ramp, two 4-way intersections, curve
     "route_B": 1002,  # straight, two curves, 4-way intersection
@@ -27,19 +26,22 @@ FIXED_ROUTES = {
 
 # ---- Discrete action set ----
 # 7 steering bins x 3 throttle bins = 21 actions.
-STEER_BINS = np.array([-0.5, -0.2, -0.08, 0.0, 0.08, 0.2, 0.5], dtype=np.float32)
+# 0.5 (sharp turns), 0.2 (normal curves), 0.08 (small lane corrections) 
+STEER_BINS = np.array([-1.0, -0.5, -0.2, -0.08, 0.0, 0.08, 0.2, 0.5, 1.0], dtype=np.float32)
 # Autopilot holds speed with throttle around 0.03-0.18, so "cruise" sits at 0.05
 # (0.1 made the CNN drive ~25% faster than its teacher).
 THROTTLE_BINS = np.array([-0.3, 0.05, 0.5], dtype=np.float32)  # brake, cruise, accelerate
 
-
+# Rounds the autopilot's real amounts to the nearest slot numbers (builds the training answer key).
+# Example: [-0.3, 0.45] -> (1, 2) = steering slot 1 (-0.2), throttle slot 2 (accelerate).
 def discretize(action):
     """Continuous autopilot action [steer, throttle] -> (steer_idx, throttle_idx)."""
     s = int(np.argmin(np.abs(STEER_BINS - np.clip(action[0], -1, 1))))
     t = int(np.argmin(np.abs(THROTTLE_BINS - np.clip(action[1], -1, 1))))
     return s, t
 
-
+# Reverse of discretize: turns the network's slot picks into real amounts for the car.
+# Example: (1, 2) -> [-0.2, 0.5] = steer slightly right, accelerate.
 def to_continuous(steer_idx, throttle_idx):
     return np.array([STEER_BINS[steer_idx], THROTTLE_BINS[throttle_idx]], dtype=np.float32)
 
@@ -61,19 +63,19 @@ def make_env(start_seed, num_scenarios=1, traffic_density=0.0, horizon=1500):
         norm_pixel=False,
         stack_size=STACK,
         sensors={"rgb_camera": (RGBCamera, IMG_SIZE, IMG_SIZE)},
-        vehicle_config=dict(show_navi_mark=False, show_line_to_navi_mark=False,
+        vehicle_config=dict(show_navi_mark=False, show_line_to_navi_mark=False, # Turn off marker guidelines
                             show_dest_mark=False, show_line_to_dest=False),
         horizon=horizon,
         # MetaDrive's default ends the episode the moment a tire touches ANY solid line,
         # which even its own autopilot trips. We only end on actually leaving the road
         # (plus curb hits, handled in hit_curb_or_left_road) and log line touches instead.
         on_continuous_line_done=False,
-        use_render=False,
+        use_render=False, # Turn gui on/off
         log_level=50,
     )
     return MetaDriveEnv(cfg)
 
-
+# The network's GPS: 4 numbers for where the next 2 route checkpoints are
 def route_target(agent):
     """Where the route goes: positions of the next two route checkpoints relative to the car,
     as (ahead, sideways) pairs in [-1, 1] (50 m scale). Same idea as TCP's "target point" input.
@@ -100,8 +102,8 @@ def obs_to_input(obs, agent, corrupt_fn=None):
         f = img[..., k]
         if corrupt_fn is not None:
             f = np.asarray(corrupt_fn(f)).astype(np.uint8)
-        frames.append(f.transpose(2, 0, 1))
-    image = np.concatenate(frames, axis=0)
+        frames.append(f.transpose(2, 0, 1)) # regroup pixel-by-pixel -> red/green/blue layers (PyTorch's layout)
+    image = np.concatenate(frames, axis=0) # stack 3 frames x 3 color layers = 9 layers (9, 84, 84)
     extra = np.concatenate([[agent.speed_km_h / 50.0], route_target(agent)]).astype(np.float32)
     return image, extra
 
@@ -123,9 +125,9 @@ def lateral_offset(agent):
     """
     nav = agent.navigation
     lanes = list(nav.current_ref_lanes or []) + list(nav.next_ref_lanes or [])
-    best = None
+    best = None # "best" = closest route lane so far (the lane the car is in)
     for ln in lanes:
-        lon, lat = ln.local_coordinates(agent.position)
+        lon, lat = ln.local_coordinates(agent.position) # lon = how far along the lane, lat = how far sideways from its center
         if -2.0 <= lon <= ln.length + 2.0 and (best is None or abs(lat) < abs(best)):
             best = lat
     if best is None:

@@ -1,0 +1,5 @@
+route,seed,steps,route_completion,success,collision,out_of_road,solid_line_touches,mean_lane_dev_m,max_lane_dev_m,pct_time_dev_over_1m,mean_speed_kmh
+route_A,1000,282,0.52,0,1,1,1,4.275,50.016,17.73,31.48
+route_B,1002,382,0.2774,0,1,1,1,0.09,0.628,0.0,12.37
+route_C,1005,310,0.4926,0,0,1,0,11.193,79.385,31.61,30.45
+route_D,1006,290,0.4921,0,0,1,0,5.239,56.788,20.0,30.75

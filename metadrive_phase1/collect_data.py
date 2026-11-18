@@ -41,6 +41,7 @@ def run_episode(env, seed, rng, perturb_prob=0.02, driver=None):
         executed = a.copy()
         if driver is not None:  # DAgger: CNN drives, autopilot only labels
             executed = to_continuous(*driver.act(image, extra))
+            executed[1] = np.clip((30.0 - env.agent.speed_km_h) / 10.0, -0.3, 1.0)
         elif perturb_left == 0 and rng.random() < perturb_prob:
             perturb_left, perturb = int(rng.integers(3, 8)), float(rng.normal(0, 0.2))
         if perturb_left > 0:

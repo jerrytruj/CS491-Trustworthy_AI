@@ -20,33 +20,42 @@ from common import (make_env, obs_to_input, to_continuous, lateral_offset, FIXED
 def make_corruption(name, severity):
     if not name:
         return None
+    if name == "brightness":  # severity = brightness in percent: 60 is darker, 140 is brighter
+        return lambda f: np.clip(f.astype(np.float32) * severity / 100.0, 0, 255).astype(np.uint8)
+    if name == "noise":  # severity = largest change allowed per pixel, out of 255
+        rng = np.random.default_rng(0)
+        return lambda f: np.clip(f.astype(np.int16) + rng.integers(-severity, severity + 1, f.shape), 0, 255).astype(np.uint8)
     from imagecorruptions import corrupt
     return lambda f: corrupt(f, corruption_name=name, severity=severity)
 
-
+ # Drives one route start to finish, recording one row per step (0.1 s). Then scores the drive (lines 50-62).
 def run_route(env, route, seed, policy, model, corrupt_fn):
-    obs, info = env.reset(seed=seed)
+    obs, info = env.reset(seed=seed) # build this route's road and put the car at the start
     expert = IDMPolicy(env.agent, seed) if policy == "autopilot" else None
     trace, snaps = [], []
     step = 0
     while True:
-        image, extra = obs_to_input(obs, env.agent, corrupt_fn)
+        image, extra = obs_to_input(obs, env.agent, corrupt_fn) # package camera + speed + GPS for this step
         if policy == "autopilot":
-            action = np.clip(np.array(expert.act(env.agent.id), dtype=np.float32), -1, 1)
+            action = np.clip(np.array(expert.act(env.agent.id), dtype=np.float32), -1, 1) # autopilot reads the map, gives real amounts
         else:
-            action = to_continuous(*model.act(image, extra))
+            action = to_continuous(*model.act(image, extra)) # network picks slots from the camera -> real amounts
+            # Speed is held near 30 km/h by a fixed rule: full gas from a stop, easing off near 30, braking above it.
+            # The network only decides steering.
+            action[1] = np.clip((30.0 - env.agent.speed_km_h) / 10.0, -0.3, 1.0)
         if step % 60 == 30 and len(snaps) < 4:
             snaps.append(image[-3:].transpose(1, 2, 0))  # newest frame, as the model saw it
-        obs, r, term, trunc, info = env.step(action)
+        obs, r, term, trunc, info = env.step(action) # send action to car
         step += 1
         x, y = env.agent.position
-        trace.append(dict(t=step, x=x, y=y, speed_kmh=env.agent.speed_km_h,
+        trace.append(dict(t=step, x=x, y=y, speed_kmh=env.agent.speed_km_h, # one row of the trace CSV (names = column headers)
                           lat_offset=lateral_offset(env.agent), steer=action[0], throttle=action[1],
                           crash=int(info["crash"]), out_of_road=int(hit_curb_or_left_road(env.agent, info)),
                           solid_line=int(touching_solid_line(env.agent)),
                           route_completion=float(info["route_completion"])))
         if term or trunc or trace[-1]["out_of_road"]:
             break
+    # ---- Score the drive: turn all the trace rows into one summary row ----
     lat = np.abs([s["lat_offset"] for s in trace])
     summary = dict(route=route, seed=seed, steps=step,
                    route_completion=round(float(info["route_completion"]), 4),

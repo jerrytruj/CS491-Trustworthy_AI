@@ -9,7 +9,7 @@ Usage:
 import argparse, os, json
 import numpy as np
 import torch, torch.nn as nn, torch.nn.functional as F
-from common import STEER_BINS, THROTTLE_BINS, STACK
+from common import STEER_BINS, THROTTLE_BINS, STACK, discretize
 
 
 class DrivingCNN(nn.Module):
@@ -48,7 +48,16 @@ def load_data(paths):
     cat = lambda k: np.concatenate([d[k] for d in ds])
     seed_of = lambda f: int(f.split("_")[-1][:-4]) if os.path.basename(f).startswith("seed_") else -1
     seeds = np.concatenate([np.full(len(d["steer"]), seed_of(f)) for d, f in zip(ds, files)])
-    return cat("images"), cat("extras"), cat("steer"), cat("throttle"), seeds
+    # Clean the autopilot's 1-step steering glitches (it flicks to full lock for a single step on straight roads):
+    # replace each steering value with the middle value of itself and its two neighbors, road by road.
+    acts = []
+    for d in ds:
+        a = d["actions"].copy()
+        s = np.pad(a[:, 0], 1, mode="edge")  # repeat the first and last value so every step has two neighbors
+        a[:, 0] = np.median(np.stack([s[:-2], s[1:-1], s[2:]]), axis=0)  # middle of (previous, current, next)
+        acts.append(a)
+    labels = np.array([discretize(a) for a in np.concatenate(acts)])
+    return cat("images"), cat("extras"), labels[:, 0], labels[:, 1], seeds
 
 
 def augment(img):
@@ -91,6 +100,7 @@ if __name__ == "__main__":
     model = DrivingCNN()
     opt = torch.optim.Adam(model.parameters(), lr=3e-4, weight_decay=1e-5)
     history = []
+    best_score, best_state, best_ep = -1.0, None, 0  # best epoch so far: its score, a copy of the network, and which epoch
     for ep in range(args.epochs):
         model.train(); perm = torch.from_numpy(np.random.permutation(tr)); tot = 0
         for i in range(0, len(perm), args.batch):
@@ -109,9 +119,14 @@ if __name__ == "__main__":
         history.append(dict(epoch=ep + 1, train_loss=tot / len(tr), val_steer_acc=acc_s,
                             val_steer_within1=near_s, val_throttle_acc=acc_t))
         print(history[-1], flush=True)
+        score = near_s + acc_s  # how good this epoch is: steering within one slot + exact steering slot, on held-out roads
+        if score > best_score:  # new best, so keep a copy of the network as it is right now
+            best_score, best_ep = score, ep + 1
+            best_state = {k: v.clone() for k, v in model.state_dict().items()}
 
     os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
-    torch.save(model.state_dict(), args.out)
+    print("best epoch:", best_ep)
+    torch.save(best_state, args.out)  # save the best epoch, not the last one
     with open(os.path.splitext(args.out)[0] + "_history.json", "w") as f:
         json.dump(history, f, indent=1)
     print("saved", args.out)
