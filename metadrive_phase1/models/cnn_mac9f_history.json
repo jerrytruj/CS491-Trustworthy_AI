@@ -1,0 +1,142 @@
+[
+ {
+  "epoch": 1,
+  "train_loss": 2.2252937842090597,
+  "val_steer_acc": 0.4902036190032959,
+  "val_steer_within1": 0.7881290912628174,
+  "val_throttle_acc": 0.7203227281570435
+ },
+ {
+  "epoch": 2,
+  "train_loss": 1.883858538009751,
+  "val_steer_acc": 0.36227428913116455,
+  "val_steer_within1": 0.7408758997917175,
+  "val_throttle_acc": 0.7721859216690063
+ },
+ {
+  "epoch": 3,
+  "train_loss": 1.6527103638356284,
+  "val_steer_acc": 0.5178639888763428,
+  "val_steer_within1": 0.8367268443107605,
+  "val_throttle_acc": 0.8369189500808716
+ },
+ {
+  "epoch": 4,
+  "train_loss": 1.45326096772555,
+  "val_steer_acc": 0.5637725591659546,
+  "val_steer_within1": 0.8549750447273254,
+  "val_throttle_acc": 0.8501728773117065
+ },
+ {
+  "epoch": 5,
+  "train_loss": 1.3250292662514023,
+  "val_steer_acc": 0.5507107377052307,
+  "val_steer_within1": 0.836150586605072,
+  "val_throttle_acc": 0.8549750447273254
+ },
+ {
+  "epoch": 6,
+  "train_loss": 1.23649006146861,
+  "val_steer_acc": 0.5833653211593628,
+  "val_steer_within1": 0.865347683429718,
+  "val_throttle_acc": 0.8421052694320679
+ },
+ {
+  "epoch": 7,
+  "train_loss": 1.1751745525025599,
+  "val_steer_acc": 0.6223587989807129,
+  "val_steer_within1": 0.8826354146003723,
+  "val_throttle_acc": 0.8718786239624023
+ },
+ {
+  "epoch": 8,
+  "train_loss": 1.1141951102632943,
+  "val_steer_acc": 0.6198617219924927,
+  "val_steer_within1": 0.8739915490150452,
+  "val_throttle_acc": 0.8568958640098572
+ },
+ {
+  "epoch": 9,
+  "train_loss": 1.0660139250676297,
+  "val_steer_acc": 0.605455219745636,
+  "val_steer_within1": 0.8699577450752258,
+  "val_throttle_acc": 0.8578563332557678
+ },
+ {
+  "epoch": 10,
+  "train_loss": 1.0176718257552233,
+  "val_steer_acc": 0.5616596341133118,
+  "val_steer_within1": 0.8624663949012756,
+  "val_throttle_acc": 0.860353410243988
+ },
+ {
+  "epoch": 11,
+  "train_loss": 0.9785819363682046,
+  "val_steer_acc": 0.5745294094085693,
+  "val_steer_within1": 0.8597771525382996,
+  "val_throttle_acc": 0.8616980314254761
+ },
+ {
+  "epoch": 12,
+  "train_loss": 0.9369069579145568,
+  "val_steer_acc": 0.5265078544616699,
+  "val_steer_within1": 0.86400306224823,
+  "val_throttle_acc": 0.862850546836853
+ },
+ {
+  "epoch": 13,
+  "train_loss": 0.9044146213562381,
+  "val_steer_acc": 0.5380330681800842,
+  "val_steer_within1": 0.8501728773117065,
+  "val_throttle_acc": 0.8588167428970337
+ },
+ {
+  "epoch": 14,
+  "train_loss": 0.8715120846090111,
+  "val_steer_acc": 0.512101411819458,
+  "val_steer_within1": 0.8570879697799683,
+  "val_throttle_acc": 0.8509412407875061
+ },
+ {
+  "epoch": 15,
+  "train_loss": 0.8433671071783124,
+  "val_steer_acc": 0.5683826208114624,
+  "val_steer_within1": 0.8814828991889954,
+  "val_throttle_acc": 0.862850546836853
+ },
+ {
+  "epoch": 16,
+  "train_loss": 0.8199713678301445,
+  "val_steer_acc": 0.5779869556427002,
+  "val_steer_within1": 0.8768728375434875,
+  "val_throttle_acc": 0.8772569894790649
+ },
+ {
+  "epoch": 17,
+  "train_loss": 0.7896078287715643,
+  "val_steer_acc": 0.5468689799308777,
+  "val_steer_within1": 0.8768728375434875,
+  "val_throttle_acc": 0.8745678067207336
+ },
+ {
+  "epoch": 18,
+  "train_loss": 0.7677952944446761,
+  "val_steer_acc": 0.5299654006958008,
+  "val_steer_within1": 0.8674606084823608,
+  "val_throttle_acc": 0.8670764565467834
+ },
+ {
+  "epoch": 19,
+  "train_loss": 0.7434257139478667,
+  "val_steer_acc": 0.5703034996986389,
+  "val_steer_within1": 0.8876296877861023,
+  "val_throttle_acc": 0.8505570292472839
+ },
+ {
+  "epoch": 20,
+  "train_loss": 0.7214049702264588,
+  "val_steer_acc": 0.5555128455162048,
+  "val_steer_within1": 0.8739915490150452,
+  "val_throttle_acc": 0.8703418970108032
+ }
+]
