@@ -36,11 +36,13 @@ for path in sorted(glob.glob("results/traces/*_route_*.csv")):
         data = list(csv.DictReader(f))
     dev = [abs(float(r["lat_offset"])) for r in data]
     failed = any(int(float(r["crash"])) or int(float(r["out_of_road"])) for r in data)
+    crash = [float(int(float(r["crash"]))) for r in data]  # 1 on any step with a collision
     rows.append(dict(tag=tag, route=route, steps=len(data),
                      completion=round(float(data[-1]["route_completion"]), 3),
                      failed=int(failed),
                      margin_lane=round(robustness(dev, LANE_LIMIT), 3),
-                     margin_severe=round(robustness(dev, SEVERE_LIMIT), 3)))
+                     margin_severe=round(robustness(dev, SEVERE_LIMIT), 3),
+                     margin_collision=round(robustness(crash, 0.5), 3)))
 
 with open("results/rtamt_summary.csv", "w", newline="") as f:
     w = csv.DictWriter(f, fieldnames=list(rows[0])); w.writeheader(); w.writerows(rows)

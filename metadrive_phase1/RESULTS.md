@@ -54,10 +54,11 @@ Brightness (% of normal): 10 gives 0, 20 gives 3, 40 gives 2, 60 gives 3, 80 giv
 
 ## 3. RTAMT (runtime monitoring on the recorded drives)
 Property: always |lateral offset| <= 2.0 m (touching the lane line is allowed, leaving the lane is not). A second tier at 3.5 m flags a full lane departure.
+Second property: always no collision (margin +0.5 if the drive had no collision, -0.5 if it did). These are the two safety requirements named in the proposal.
 Margin is in meters. Positive means the rule held for the whole drive.
 - Routes A, B, and D hold a margin of about +0.2 to +0.8 m in almost every setting.
 - Successful drives that still strayed: route A at brightness 140% (-3.7 m, the offset ramped up smoothly, so it is real drift), and route C at noise +-4 and +-8 (about -1 m). The simulator's success flag does not capture this.
-- Route B's two crashes (brightness 120%, noise +-4, both at about 93%) show a positive margin (+0.3 m): the car crashed while inside its lane, so a lateral-offset rule cannot see that failure. Limitation: our traces have no distance-to-obstacle signal.
+- Route B's two crashes (brightness 120%, noise +-4, both at about 93%) show a positive lane margin (+0.3 m) because the car crashed while inside its lane. The lane rule cannot see that failure but the collision rule does (-0.5). Route C's clean run leaves the road without a collision, so there it is the other way around. The two rules together cover both failure types. Limitation: our traces have no distance-to-obstacle signal, so a collision is only seen once it happens.
 - Full table: `results/rtamt_summary.csv` (script: `rtamt_monitor.py`).
 
 ## 4. Formal verification (auto_LiRPA CROWN bounds, 60 frames, roads 27-29)
