@@ -70,7 +70,7 @@ def make_env(start_seed, num_scenarios=1, traffic_density=0.0, horizon=1500):
         # which even its own autopilot trips. We only end on actually leaving the road
         # (plus curb hits, handled in hit_curb_or_left_road) and log line touches instead.
         on_continuous_line_done=False,
-        use_render=False, # Turn gui on/off
+        use_render=__import__("os").environ.get("DEMO_RENDER") == "1", # GUI is on only when DEMO_RENDER=1
         log_level=50,
     )
     return MetaDriveEnv(cfg)
