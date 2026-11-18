@@ -38,8 +38,19 @@ Route C is the hard one: the network leaves the road at about 64% every time on 
 | Noise +-8/255 | ok | ok | ok | ok | 4/4 |
 
 Routes A and D finished in all 9 runs. B finished 7 of 9 and C finished 3 of 9.
-Success count did not fall as the disturbance got bigger, so in simulation these disturbances did not clearly hurt the driver.
+Within this range the success count did not fall as the disturbance got bigger. Section 2b pushes much harder.
 Route C flips between pass and fail with no pattern tied to disturbance size, so treat B and C as indicative only (one run per setting).
+
+## 2b. Finding the driving breaking points (final model, routes finished out of 4)
+Noise (out of 255): 0 gives 3, 1 gives 3, 2 gives 3, 4 gives 3, 8 gives 4, 16 gives 3, 32 gives 3, 64 gives 4, 128 gives 1.
+Brightness (% of normal): 10 gives 0, 20 gives 3, 40 gives 2, 60 gives 3, 80 gives 3, 100 gives 3, 120 gives 3, 140 gives 3, 180 gives 3, 220 gives 4, 300 gives 3, 450 gives 0.
+- Route D finishes from 20% to 300% brightness and through noise of +-128. It fails at 10% and 450% brightness.
+- Route A finishes from 20% to 300% brightness and through noise of +-64. It fails at 10% and 450% brightness and at noise of +-128.
+- Route B first fails at 40% brightness (a crash at 45% of the route). It also fails at 10% and 450% brightness and at noise of +-128.
+- Route C fails in most runs but passes now and then (for example at noise +-64 and brightness 220%), so it stays indicative only.
+- Lane quality gets worse before the car fails. At 180% to 300% brightness routes A and B spend 26 to 43% of the drive more than 1 m off center, compared with under 6% at normal brightness.
+- The gap with verification: random noise needs about +-64 to +-128 out of 255 to break the driver, while the formal check can only guarantee the steering decision up to about +-0.25 out of 255. That is roughly 250 to 500 times smaller.
+- Figure: `results/figs_phase2/fig4_thresholds.png` (script: `make_threshold_fig.py`).
 
 ## 3. RTAMT (runtime monitoring on the recorded drives)
 Property: always |lateral offset| <= 2.0 m (touching the lane line is allowed, leaving the lane is not). A second tier at 3.5 m flags a full lane departure.
@@ -78,5 +89,5 @@ The strict version (same slot, not just within one slot) is also in `results/ver
 ## Files
 - `results/*_summary.csv` drive scores per setting, `results/traces/` per-step logs, `results/frames/` snapshots
 - `results/rtamt_summary.csv`, `results/verify_summary.csv` (final model), `results/verify_summary_9e.csv` (round 2)
-- `results/figs_phase2/` the three report figures
+- `results/figs_phase2/` the four report figures
 - `models/cnn_mac9c.pt` (imitation only), `cnn_mac9d.pt`, `cnn_mac9e.pt`, `cnn_mac9f.pt` (final)
