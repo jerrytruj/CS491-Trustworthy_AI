@@ -1,89 +1,104 @@
-# Phase 1: MetaDrive + CNN driving baseline (Group 08)
+CS 491/591 Final Project - Group 08
 
-Pipeline: autopilot drives -> record camera frames + the autopilot's actions -> train a CNN to imitate it
--> CNN drives the fixed routes -> baseline metrics.
+Brandon Pham, Diego Uriarte, Jerry Trujillo
 
-## Setup (once)
+Robustness testing of an end-to-end driving model in MetaDrive. We trained a CNN to drive by imitating MetaDrive's autopilot (with DAgger), then tested it with image noise and brightness changes, checked the drives with RTAMT, and ran auto_LiRPA (CROWN) on the steering decision.
 
-Use **Python 3.11** (3.12+ won't work). The PyPI version of MetaDrive is broken (old `gym` dependency
-fails to install), so install it from GitHub:
+All the code is in metadrive_phase1/, run everything from inside that folder. The final model from the report is models/cnn_mac9f.pt. RESULTS.md has all the numbers.
 
-```bash
+Setup
+
+Python 3.11 only (3.12 doesn't work). MetaDrive from pip is broken so install it from GitHub:
+
+bash
 python3.11 -m venv .venv
 source .venv/bin/activate            # Windows: .venv\Scripts\activate
 pip install "git+https://github.com/metadriverse/metadrive.git"
+pip install "git+https://github.com/Verified-Intelligence/auto_LiRPA.git"
 pip install -r requirements.txt
-```
 
-First run downloads MetaDrive's 3D assets (~200 MB), that's normal.
-Linux with no display: put `xvfb-run -a` in front of every `python` command. Mac/Windows: not needed.
-Each simulator uses ~4 GB of RAM with software rendering, so only run one script at a time.
+The first run downloads about 200 MB of MetaDrive assets. On Linux without a display put xvfb-run -a before each python command. Each simulator takes around 4 GB of RAM so run one script at a time.
 
-**Quick test that setup worked:** `python evaluate.py --policy autopilot --routes route_A`
-(should finish with `success: 1` in a few minutes).
+To check it works: python evaluate.py --policy autopilot --routes route_A should finish with success: 1.
 
-## Run it (from this folder)
+Note: everything in the report was run on one Mac. Our models didn't give the same results across machines.
 
-| Step | Command | Time on a 2-core cloud CPU |
-|---|---|---|
-| 1. Autopilot drives the 4 fixed routes (checkpoint) | `python evaluate.py --policy autopilot` | ~10 min |
-| 2. Collect autopilot data on 30 training routes | `python collect_data.py --out data/autopilot` | ~75 min |
-| 3. Train the CNN | `python train_cnn.py --data data/autopilot --epochs 20` | ~8 min |
-| 4. CNN drives the 4 fixed routes | `python evaluate.py --policy cnn` | ~10 min |
-| 5. (optional) DAgger round: CNN drives, autopilot labels | `python collect_data.py --out data/dagger1 --model models/cnn_policy.pt --seeds 0-19` | ~50 min |
-| 6. (optional) Retrain with DAgger data, then redo step 4 | `python train_cnn.py --data data/autopilot data/dagger1 --epochs 20` | ~10 min |
-| 7. Table + figures for the report | `python make_report_figs.py` | seconds |
+Models
+cnn_mac9c.pt - imitation only
+cnn_mac9d.pt - DAgger round 1
+cnn_mac9e.pt - DAgger round 2
+cnn_mac9f.pt - DAgger round 3, final model
 
-Your machine should be a lot faster than these times. Collection saves each route as its own file in the
-`--out` folder, so if it gets interrupted just rerun the same command and it skips finished routes.
+cnn_policy.pt and cnn_policy_round0.pt are old Phase 1 models, not used in the final report.
 
-Trained models are included so you can skip straight to step 4:
-- `models/cnn_policy_round0.pt`: trained on autopilot data only
-- `models/cnn_policy.pt`: after one DAgger round
-Use one with `python evaluate.py --policy cnn --model models/cnn_policy_round0.pt --tag cnn_round0`.
+Reproducing the report
+Clean drives (Table 1, Fig. 1)
+bash
+python evaluate.py --policy autopilot --tag autopilot_clean
+python evaluate.py --policy cnn --model models/cnn_mac9c.pt --tag cnn_mac9c
+python evaluate.py --policy cnn --model models/cnn_mac9d.pt --tag cnn_mac9d
+python evaluate.py --policy cnn --model models/cnn_mac9e.pt --tag cnn_mac9e
+python evaluate.py --policy cnn --model models/cnn_mac9f.pt --tag cnn_mac9f
+Noise and brightness (Table 2, Fig. 2)
 
-## Outputs
-- `results/<tag>_summary.csv`: one row per route (route completion, success, collision, out of road,
-  solid line touches, lane deviation, speed)
-- `results/traces/*.csv`: per-step speed, lane offset, crash/line flags (what RTAMT will read in Phase 2)
-- `results/frames/*.png`: what the camera saw
-- `results/figs/`: report table + figures (`make_report_figs.py` reads the `autopilot_clean` and `cnn_clean` tags)
+For noise, severity is the max change per pixel out of 255. For brightness it's a percent of normal. Use these tag names because the figure scripts look for them.
 
-## Where things stand (as of Oct 7)
+bash
+for k in 1 2 4 8 16 32 64 128; do
+  python evaluate.py --policy cnn --model models/cnn_mac9f.pt --corruption noise --severity $k --tag cnn_mac9f_noise$k
+done
+for p in 10 20 40 60 80 120 140 180 220 300 450; do
+  python evaluate.py --policy cnn --model models/cnn_mac9f.pt --corruption brightness --severity $p --tag cnn_mac9f_brightness$p
+done
 
-| | Autopilot | CNN round 0 | CNN after DAgger |
-|---|---|---|---|
-| route_A | completes | completes | completes, cleaner (4% of time >1 m off center vs 11%) |
-| route_B | completes | hits curb at 28% | hits curb at 24% |
-| route_C | completes | leaves road at 41% (roundabout) | stalls, 35% at time limit (over-brakes) |
-| route_D | completes | leaves road at 49% (T-junction) | stalls at 50% at time limit (over-brakes) |
+On Windows run them one at a time or use Git Bash.
 
-So the pipeline works end to end, the autopilot baseline is solid (4/4), and the CNN baseline is weak
-outside the easy route. The following are some additional things we could think to add as well:
-1. **Fix over-braking from DAgger.** The autopilot slams the brake (-1) any time speed passes ~30 km/h,
-   so DAgger data is ~25% brake labels. Try a lower brake weight in `train_cnn.py` (throttle class weight
-   power 1.0 -> 0.5), or relabel brake as cruise when speed is within a few km/h of 30.
-2. **More DAgger rounds** (round 2 using the new model), the textbook fix for junction failures.
-3. **Look at route_B's start**: the CNN creeps from 0 km/h for a long time (autopilot floors it at the
-   start); check `results/traces/cnn_clean_route_B.csv`.
-4. More training routes or bigger images (84x84 is small for spotting junctions).
+RTAMT (Fig. 3)
+bash
+python rtamt_monitor.py
 
-## Design notes (a.k.a the methodology section)
-- **Routes:** procedurally generated 4-block MetaDrive roads. Training on seeds 0-29; validation during
-  training uses whole held-out routes (27-29). Fixed evaluation routes, never trained on:
-  route_A=1000, route_B=1002, route_C=1005, route_D=1006 (mix of intersections, roundabouts, T-junction,
-  ramps). Seeds 1001, 1003, 1007 were screened out because the autopilot itself crashes on them
-  (3 of the 10 screened). No traffic in Phase 1.
-- **Inputs:** last 3 front-camera frames (84x84 RGB), speed, and a route target: positions of the next two
-  route checkpoints relative to the car (same idea as TCP's target point). MetaDrive's on-road guide line
-  is turned off so the CNN has to read the actual road. MetaDrive's built-in left/straight/right flags
-  were tried first but only describe road curvature, never which way to turn at a junction.
-- **Actions:** 21 discrete = 7 steering bins x 3 throttle bins (brake -0.3 / cruise 0.05 / accelerate 0.5).
-- **Teacher:** MetaDrive's built-in IDM autopilot. During collection the steering is occasionally nudged
-  off for a few steps while the label stays the autopilot's action (DART-style noise injection), so the
-  CNN sees recoveries. Optional DAgger rounds as above.
-- **Episode end:** leaving the drivable road, hitting the curb, collision, or reaching the destination.
-  MetaDrive's default also ends an episode on touching any solid line, which even its own autopilot trips,
-  so that's turned off and line touches are counted as a metric instead.
-- **Metrics:** route completion %, success, collision, out-of-road, solid line touches, mean/max offset
-  from lane center (m, measured against the route's own lanes), % of time >1 m off center, mean speed.
+Goes through every drive in results/traces/ and checks that the car stays within 2.0 m of the lane center the whole time, and that there's no collision. Output is results/rtamt_summary.csv, positive margin means the rule held.
+
+Verification (Table 3, Fig. 4)
+
+This needs camera frames from roads 27-29, which aren't in the zip because of size. Record them first (only takes a few minutes):
+
+bash
+python collect_data.py --out data/autopilot_mac --seeds 27-29
+python verify_cnn.py --model models/cnn_mac9f.pt --n 60 --out results/verify_summary.csv
+python verify_cnn.py --model models/cnn_mac9e.pt --n 60 --out results/verify_summary_9e.csv
+python verify_cnn.py --model models/cnn_mac9f.pt --n 5 --method alpha-CROWN --out results/verify_alpha_test.csv
+
+Each frame ends up verified, falsified (the attack found an image that flips the steering), or unknown. Collection randomly nudges the steering, so a new recording won't have the exact same 60 frames we used.
+
+Figures
+bash
+python make_phase2_figs.py
+python make_threshold_fig.py
+
+They go in results/figs_phase2/.
+
+Training from scratch
+
+Optional and slow (times below are on a 2-core cloud CPU, a laptop is faster).
+
+bash
+python collect_data.py --out data/autopilot                       # ~75 min
+python train_cnn.py --data data/autopilot --epochs 20 --out models/my_round0.pt
+python collect_data.py --out data/dagger1 --model models/my_round0.pt --seeds 0-29   # DAgger, ~50 min
+python train_cnn.py --data data/autopilot data/dagger1 --epochs 20 --out models/my_round1.pt
+
+Repeat the last two lines for each extra DAgger round, with a new data folder each time. train_cnn.py uses roads 27-29 for validation and keeps the best epoch. If collection gets interrupted, rerun the same command and it skips roads it already finished.
+
+Setup details
+Training roads are seeds 0-26, validation 27-29. Test routes are A=1000, B=1002, C=1005, D=1006 and were never trained on. No traffic.
+Input is the last 3 camera frames (84x84), speed, and the next two route checkpoints. The on-road guide line is turned off so the CNN has to actually see the road.
+The CNN only picks steering, 9 options from -1 to 1. Speed is kept around 30 km/h by a simple rule.
+The autopilot (IDM) is the teacher. While collecting we nudge the steering 2% of the time but keep the autopilot's label, so the data has recoveries in it (DART). Steering labels get a median filter because the autopilot sometimes spikes to full lock for one step.
+A drive ends when the car leaves the road, hits the curb, crashes, or reaches the end. Touching a solid line doesn't end it since even the autopilot does that, we just count it.
+Output files
+results/<tag>_summary.csv - one row per route (completion, success, crashes, lane deviation, speed)
+results/traces/ - step by step logs that RTAMT reads
+results/frames/ - camera snapshots
+results/rtamt_summary.csv, results/verify_summary*.csv - monitoring and verification results
+results/figs_phase2/ - report figures
